@@ -6,12 +6,11 @@ using InteractiveUtils
 
 # ╔═╡ 0df0f0fa-0c4a-4bff-be0f-1cefc8055111
 begin
-	using Turing,MCMCChains
-	using LaTeXStrings
-	using StatsPlots, Random
-	using StatsBase
+	using Turing,MCMCChains, Random
+	using LaTeXStrings, Latexify
+	using StatsPlots, StatsBase
 	using DataFrames
-	using Symbolics, Latexify
+	using Symbolics
 end # begin
 
 # ╔═╡ 0a3e1f1e-c80e-451d-a985-979d1c336e45
@@ -22,7 +21,7 @@ md"
 ===================================================================================
 #### Lee & Wagenmakers, ch 4: [Inferring with Gaussians](https://bayesmodels.com/)
 ##### file: PCM20240102\_L&W\_InferringWithGaussians.jl
-##### Julia/Pluto.jl-code (1.10.1/19.36) by PCM *** 2024/01/21 ***
+##### Julia/Pluto.jl-code (1.10.1/19.36) by PCM *** 2024/02/01 ***
 
 ===================================================================================
 "
@@ -181,13 +180,13 @@ likelihoods = [likelihoodGaussian(μ, 15.0, dataFrameGauss.ys) for μ in 98:1:10
 let likelihoods1 = 
 		[likelihoodGaussian(μ, 15.0, dataFrameGauss.ys) for μ in 97:0.1:103]
 	likelihoods2 = 
-		[likelihoodGaussian(μ, 15.0, dataFrameGauss.ys) for μ in 98:1.0:102]
-	μs1 = [μ for μ in 97.0:0.1:103.0]
-	μs2 = [μ for μ in 98.0:1.0:102.0]
+		[likelihoodGaussian(μ, 15.0, dataFrameGauss.ys) for μ in 98:1:102]
+	μs1 = [μ for μ in 97:0.1:103]
+	μs2 = [μ for μ in 98:1:102]
 	minLikelihood1 = min(likelihoods1...)
 	minLikelihood2 = min(likelihoods2...)
 	maxLikelihood1 = max(likelihoods1...)*1.01
-	plot(μs1, likelihoods1, xlimits=(97, 103), ylimits=(minLikelihood1, maxLikelihood1), lw=2, label=L"L(μ,σ=15|y)", title=L"$Likelihood$ for $μ=98,...,102$", xlabel=L"μ", ylabel=L"likelihood\; $L$")
+	plot(μs1, likelihoods1, xlimits=(97, 103), ylimits=(minLikelihood1, maxLikelihood1), lw=2, label=L"L(μ,σ=15|y)", title=L"$Likelihood$ for $μ=98,...,102$", xlabel=L"μ", ylabel=L"likelihood $\;L$")
 	(ys, fys)   =  makeZigZagLine(μs2, likelihoods2)
 	plot!(ys, fys, label=missing)
 	scatter!(μs2, likelihoods2, label=L"L(μ_i,σ=15|y)", color=:red)
@@ -795,19 +794,38 @@ md"
 
 # ╔═╡ 7a400bb0-2d03-49c2-856e-22242a8c3f0e
 md"
-###### Densities of $\Gamma$-Distributions
+###### Densities of [$\Gamma$-Distributions](https://en.wikipedia.org/wiki/Gamma_distribution)
+
+$\;$
+
+... possess parameters 
+
+$\mu := \alpha \cdot \theta \text{ and }\sigma^2 := \alpha \cdot \theta^2.$
+
+$\;$
+
+Starting with a specification containing $\mu$ and $\sigma$ we can derived the desired parameters 
+
+$\alpha = \frac{\mu}{\theta} \text{ and }\theta = \frac{\sigma}{\sqrt{\alpha}}$
+
+$\;$
+$\;$
+
 "
 
 # ╔═╡ 1b1eb8e5-f9bf-4ed6-9b07-6e72e47f7de7
-let par2 = 1E2
-	par3 = 1E3
-	par4 = 1E4
-	par5 = 1E5
-	dg2  = density(Gamma(par2, 1/par2), title=L"\Gamma(1E2, 1/1E2)")
-	dg3  = density(Gamma(par3, 1/par3), title=L"\Gamma(1E3, 1/1E3)")
-	dg4  = density(Gamma(par4, 1/par4), title=L"\Gamma(1E4, 1/1E4)")
-	dg5  = density(Gamma(par5, 1/par5), title=L"\Gamma(1E5, 1/1E5)")
-	plot(dg2, dg3, dg4, dg5, layout=(4,1), size=(600,700))
+let α1 = 1.0; θ1  = 1.0
+	α3 = 3.0; θ05 = 0.5
+	α5 = 5.0; θ2  = 2.0
+	α10 = 10.0; 
+	α15 = 15.0
+	plot(Gamma(α1, θ1), size=(700,500), xlimits=(0, 30), ylimits=(-0.02, 1.0), title=L"$\Gamma(α, θ)$",label=L"\Gamma(α=1, θ=1)")
+	plot!(Gamma(α3,  θ05),  label=L"\Gamma(α=3, θ=0.5)")
+	plot!(Gamma(α5,  θ05), label=L"\Gamma(α=5,  θ=0.5)")
+	plot!(Gamma(α5,  θ2),  label=L"\Gamma(α=5,  θ=2)")
+	plot!(Gamma(α10, θ05), label=L"\Gamma(α=10, θ=0.5)")
+	plot!(Gamma(α15, θ1),  label=L"\Gamma(α=15, θ=1)")
+	hline!([0.0], label=false, color=:black)
 end # let
 
 # ╔═╡ 9b0cdc90-b9be-4beb-8c24-7f03702c9c33
@@ -815,18 +833,19 @@ md"
 ---
 ###### 2-Parameter Model Function $sevenScientists2Parms$ with *Informative* Prior*
 
-The function $sevenScientists2Parms$ carries a postfix $2Parms$ because it contains a *reduced* number of parameters, here namely $\mu, \sigma$.
+The function's name $sevenScientists2Parms$ carries a postfix $2Parms$ because it contains a *reduced* number of parameters, here namely $\mu, \sigma$.
 "
 
 # ╔═╡ 2e247173-753f-42c7-ba09-7b2f30431cd2
 @model function sevenScientists2Parms(n)
-	par3 = 1E3                              # = 1.000
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                            # μ = 10, σ^2 = 20, σ = 4.5
 	#------------------------------------------------------------------------------
 	x = Array{Float64}(undef, n)
 	#------------------------------------------------------------------------------
 	# Priors
-	μ ~ Normal(10.0, 30.0)                  # informative prior
-	σ ~ Gamma(par3, 1/par3)                 # density see above
+	μ ~ Normal(μ0, σ0)                      # informative prior
+	σ ~ Gamma(α, θ)                         # density see above
 	#------------------------------------------------------------------------------
 	# Gaussian Likelihood
 	for i in 1:n 
@@ -842,7 +861,7 @@ md"
 
 # ╔═╡ 04e93237-b86d-43de-b78f-d951b6ea0889
 modelSevenScientists3Data =
-	let data3 = [9.603, 9.945, 10.056]       # scientists G - E
+	let data3 = [9.603, 9.945, 10.056]       # scientists E - G
 		n     = length(data3)                # number of data or measurements
 		sevenScientists2Parms(n) | (;x = data3)
 	end # let
@@ -866,7 +885,7 @@ let μPost3   = chainSevenScientists3Data[:μ]
 	density31 = 
 		begin
 			plot(density(μPost3, size=(700, 200), label=L"μPost3"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	density32 = density(σPost3, size=(700, 200), label=L"σPost3")
 	plot(density31, density32, title="Scientist E-G", layout=(1, 2))
@@ -880,11 +899,11 @@ md"
 
 # ╔═╡ c2f1072f-03f7-4a34-91da-03eadc4a2b27
 modelSevenScientists4Data = 
-	let data3 = [9.603, 9.945, 10.056]                              # scientists G - E
-		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists G - D
-		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists G - C
-		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists G - B
-		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists G - A
+	let data3 = [9.603, 9.945, 10.056]                              # scientists E-G
+		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists D-G
+		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists C-G
+		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists B-G
+		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists A-G
 		n     = length(data4)  # number of data or measurements
 		sevenScientists2Parms(n) | (;x = data4)
 	end # let
@@ -908,7 +927,7 @@ let μPost4   = chainSevenScientists4Data[:μ]
 	density41 = 		
 		begin
 			plot(density(μPost4, size=(700, 200), label=L"μPost4"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	density42 = density(σPost4, size=(700, 200), label=L"σPost4")
 	plot(density41, density42, title="Scientist D_G", layout=(1, 2))
@@ -922,11 +941,11 @@ md"
 
 # ╔═╡ 5545a57f-adda-4a26-b297-bf7e33475e42
 modelSevenScientists5Data = 
-	let data3 = [9.603, 9.945, 10.056]                              # scientists G - E
-		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists G - D
-		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists G - C
-		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists G - B
-		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists G - A
+	let data3 = [9.603, 9.945, 10.056]                              # scientists E-G
+		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists D-G
+		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists C-G
+		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists B-G
+		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists A-G
 		n     = length(data4)  # number of data or measurements
 		sevenScientists2Parms(n) | (;x = data5)
 	end # let
@@ -950,7 +969,7 @@ let μPost5   = chainSevenScientists5Data[:μ]
 	density51 = 
 		begin
 			plot(density(μPost5, size=(700, 200), label=L"μPost5"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	density52 = density(σPost5, size=(700, 200), label=L"σPost5")
 	plot(density51, density52, title="Scientist C-G", layout=(1, 2))
@@ -964,11 +983,11 @@ md"
 
 # ╔═╡ 9cd561d2-3d4f-4d20-ad8a-bb165830a5c8
 modelSevenScientists6Data = 
-	let data3 = [9.603, 9.945, 10.056]                              # scientists G - E
-		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists G - D
-		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists G - C
-		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists G - B
-		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists G - A
+	let data3 = [9.603, 9.945, 10.056]                              # scientists E-G
+		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists D-G
+		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists C-G
+		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists B-G
+		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists A-G
 		n     = length(data6)  # number of data or measurements
 		sevenScientists2Parms(n) | (;x = data6)
 	end # let
@@ -992,7 +1011,7 @@ let μPost6   = chainSevenScientists6Data[:μ]
 	density61 = 		
 		begin
 			plot(density(μPost6, size=(700, 200), label=L"μPost6"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	density62 = density(σPost6, size=(700, 200), label=L"σPost6")
 	plot(density61, density62, title="Scientist B-G", layout=(1, 2))
@@ -1006,11 +1025,11 @@ md"
 
 # ╔═╡ 2234c65e-c988-408d-99f5-9d8de6f1de76
 modelSevenScientists7Data = 
-	let data3 = [9.603, 9.945, 10.056]                              # scientists G - E
-		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists G - D
-		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists G - C
-		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists G - B
-		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists G - A
+	let data3 = [9.603, 9.945, 10.056]                              # scientists E-G
+		data4 = [9.898, 9.603, 9.945, 10.056]                       # scientists D-G
+		data5 = [8.191, 9.898, 9.603, 9.945, 10.056]                # scientists C-G
+		data6 = [3.570, 8.191, 9.898, 9.603, 9.945, 10.056]         # scientists B-G
+		data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]# scientists A-G
 		n     = length(data7)  # number of data or measurements
 		sevenScientists2Parms(n) | (;x = data7)
 	end # let
@@ -1043,32 +1062,32 @@ let μPost3 = chainSevenScientists3Data[:μ]
 	d31 = 		
 		begin
 			plot(density(μPost3, size=(700, 200), label=L"μPost3"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin	 
 	
 	d32 = density(σPost3, size=(700, ylim), title="Scientist E - G", label=L"σPost3")
 	d41 = 
 		begin
 			plot(density(μPost4, size=(700, 200), label=L"μPost4"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	d42 = density(σPost4, size=(700, ylim), title="Scientist D - G", label=L"σPost4")
 	d51 = 
 		begin
 			plot(density(μPost5, size=(700, 200), label=L"μPost5"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	d52 = density(σPost5, size=(700, ylim), title="Scientist C - G", label=L"σPost5")
 	d61 = 
 		begin
 			plot(density(μPost6, size=(700, 200), label=L"μPost6"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	d62 = density(σPost6, size=(700, ylim), title="Scientist B - G", label=L"σPost6")
 	d71 = 
 		begin
 			plot(density(μPost7, size=(700, 200), label=L"μPost7"))
-			plot!(vline!([10.0], size=(700, 200), color=:red, lw=2))
+			plot!(vline!([10.0], size=(700, 200), color=:red, label=L"\mu=10"))
 		end # begin
 	d72 = density(σPost7, size=(700, ylim), title="Scientist A - G", label=L"σPost7")
 	plot(d31, d32, d41, d42, d51, d52, d61, d62, d71, d72, layout=(5,2))
@@ -1076,7 +1095,7 @@ end # let
 
 # ╔═╡ 21cdf444-1eac-4c7c-b890-46232fe24ce2
 md"
-The plots (above) clearly demonstrate that only the three scientists E,F, and G comprise a group near *MacKay's* ideal $10$ (red vertical line). The addition of scientists B and A spoil this harmony in the sense, that the group's mean is more than two standard deviations apart from *MacKay's* idela $10$.
+The plots (above) clearly demonstrate that only the three scientists E,F, and G comprise a group near *MacKay's* ideal $10$ (red vertical line). The addition of scientists B and A spoil this harmony in the sense, that the group's mean is more than two standard deviations apart from *MacKay's* ideal $10$.
 
 "
 
@@ -1096,13 +1115,13 @@ let n  = 3:1:7
 	σs = [mean(σPost3), mean(σPost4), mean(σPost5), mean(σPost6), mean(σPost7)]
 	pl1 =
 		begin
-			scatter( n, μs, label=L"μs", xlabel=L"3:G-E;4:G-D;5:G-C;6:G-B;7:G-A")
+			scatter( n, μs, label=L"μs", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
 			scatter!([7],[μs[5]], label=L"μs", color=:red)
 			plot!(n, μs, label=L"μs")
 		end # begin
 	pl2 = 
 		begin
-			scatter( n, σs, label=L"σs", xlabel=L"3:G-E;4:G-D;5:G-C;6:G-B;7:G-A")
+			scatter( n, σs, label=L"σs", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
 			scatter!([7],[σs[5]], label=L"σs", color=:red)
 			plot!(n, σs, label=L"σs")
 		end # begin
@@ -1131,7 +1150,7 @@ end; # begin
 
 # ╔═╡ 1ea15a61-6f0a-4d0f-946a-fa2cc61edb5c
 md"
-###### means $μs$ and variances $σs$ correlate perfect inversely: $r(μ,σ)=-0.98$
+###### means $μs$ and variances $σs$ correlate nearly perfect inversely
 "
 
 # ╔═╡ 074dc199-e87c-4664-b645-b79530a563bd
@@ -1165,84 +1184,29 @@ The plots demonstrate clearly that scientist $A$ (*red* dots in panels) is an ou
 # ╔═╡ 21a38b04-f2d8-4333-8a0f-0b3959705fb6
 md"
 ---
-###### 4-Parameter Model $sevenScientists4Parms$
-"
-
-# ╔═╡ 282676df-39a7-4b82-ab22-70e7986e1144
-let par3 = 1E3
-	density(Gamma(par3, 1/par3), size=(700, 200), title=L"\Gamma(1E3, 1/1E3)")
-end # let
-
-# ╔═╡ ce855725-f44f-4d06-920c-a966012281da
-@model function sevenScientists4Parms(n)
-	par3 = 1E3                               # = 100
-	#------------------------------------------------------------------------------
-	x = Array{Float64}(undef, n)
-	σ = Array{Float64}(undef, n)
-	#------------------------------------------------------------------------------
-	# Priors
-	μ  ~ Normal(10.0, 30.0)                  # informative prior
-	for i in 1:n 
-		if i <= 3
-			σ[i] ~ Gamma(par3, 1/par3)       # density see above
-		else
-			σ[i] = σ[3]
-		end # if
-	end # for
-	#------------------------------------------------------------------------------
-	# Gaussian Likelihood
-	for i in 1:n 
-		x[i] ~ Normal(μ, σ[i])               # σ[1], σ[2] are unconstrained
-	end # for
-end # function sevenScientists4Parms
-
-# ╔═╡ da8f87f0-f351-48e5-ba05-d59117fd4a4b
-modelSevenScientists4Parms = 
-	# scientists G - A
-	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
-		n     = length(data7)  # number of data or measurements
-		sevenScientists4Parms(n) | (;x = data7)
-	end # let
-
-# ╔═╡ a9342b19-1ab4-4719-a5b7-84c76db0dca3
-chainSevenScientists4Parms = 
-	let iterations = 5000
-		sampler = NUTS(2000, 0.65)
-		# sampler = MH()
-		sample(modelSevenScientists4Parms, sampler, iterations)
-	end # let
-
-# ╔═╡ 1dcfe0e4-bf07-491a-80f0-da30b740eadf
-describe(chainSevenScientists4Parms)
-
-# ╔═╡ 87f04fe5-1609-4940-9048-46ba1b0a880c
-plot(chainSevenScientists4Parms)
-
-# ╔═╡ 60956dc6-b103-4ffa-91f2-00f85c9adf2d
-md"
-The posteriors show that the distributions of $\sigma[3], \sigma[4]$ are very similar so that we can reduce the number of parameters from 4 to 3 by introducng an *equality* constraint $\sigma[3] =\sigma[4]$.
-"
-
-# ╔═╡ e77c70e8-0a31-4959-92ac-ddfdc8c2cc5d
-md"
----
 ###### 3-Parameter Model $sevenScientists3Parms$
 "
 
-# ╔═╡ 3b3a180c-3150-4c6f-bf08-a065774df9f7
+# ╔═╡ 282676df-39a7-4b82-ab22-70e7986e1144
+let α = 5; θ = 2
+	plot(Gamma(α, θ), size=(700, 200), title=L"\Gamma(\alpha=5, \theta=2); \mu=10,\sigma^2=20,\sigma=4.5")
+end # let
+
+# ╔═╡ ce855725-f44f-4d06-920c-a966012281da
 @model function sevenScientists3Parms(n)
-	par3 = 1E3                               # = 100
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
 	#------------------------------------------------------------------------------
 	x = Array{Float64}(undef, n)
 	σ = Array{Float64}(undef, n)
 	#------------------------------------------------------------------------------
 	# Priors
-	μ  ~ Normal(10.0, 30.0)                  # informative prior
+	μ  ~ Normal(μ0, σ0)                      # informative prior
 	for i in 1:n 
 		if i <= 2
-			σ[i] ~ Gamma(par3, 1/par3)       # density see above
+			σ[i] ~ Gamma(α, θ)               # scientist A, B
 		else
-			σ[i] = σ[2]
+			σ[i] = σ[2]                      # scientist C ... G = B
 		end # if
 	end # for
 	#------------------------------------------------------------------------------
@@ -1252,15 +1216,15 @@ md"
 	end # for
 end # function sevenScientists3Parms
 
-# ╔═╡ c0681b31-37b0-42c1-8422-085c8edcb8a7
+# ╔═╡ da8f87f0-f351-48e5-ba05-d59117fd4a4b
 modelSevenScientists3Parms = 
-	# scientists G - A
+	# scientists A - G
 	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
 		n     = length(data7)  # number of data or measurements
 		sevenScientists3Parms(n) | (;x = data7)
 	end # let
 
-# ╔═╡ e771dc37-c328-4a25-8397-ad4812f511db
+# ╔═╡ a9342b19-1ab4-4719-a5b7-84c76db0dca3
 chainSevenScientists3Parms = 
 	let iterations = 5000
 		sampler = NUTS(2000, 0.65)
@@ -1268,18 +1232,76 @@ chainSevenScientists3Parms =
 		sample(modelSevenScientists3Parms, sampler, iterations)
 	end # let
 
-# ╔═╡ 17d53559-fbb9-4ba8-9845-d4a0a8cd16d8
+# ╔═╡ 1dcfe0e4-bf07-491a-80f0-da30b740eadf
 describe(chainSevenScientists3Parms)
 
-# ╔═╡ fd518c1e-8e56-4d29-87a4-b6590760cf53
+# ╔═╡ 87f04fe5-1609-4940-9048-46ba1b0a880c
 plot(chainSevenScientists3Parms)
+
+# ╔═╡ 60956dc6-b103-4ffa-91f2-00f85c9adf2d
+md"
+The posteriors demonstrate the results by introducing an *equality* constraint 
+$\sigma[2] = \sigma[3], ..., \sigma[7]$ which means that scientists *B* - *G* are treated equally.
+"
+
+# ╔═╡ e77c70e8-0a31-4959-92ac-ddfdc8c2cc5d
+md"
+---
+###### 4-Parameter Model $sevenScientists4Parms$
+"
+
+# ╔═╡ 3b3a180c-3150-4c6f-bf08-a065774df9f7
+@model function sevenScientists4Parms(n)
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	μ  ~ Normal(μ0, σ0)                      # informative prior
+	for i in 1:n 
+		if i <= 3
+			σ[i] ~ Gamma(α, θ)               # scientist A, B, C
+		else
+			σ[i] = σ[3]                      # scientist D ... G = C
+		end # if
+	end # for
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained
+	end # for
+end # function sevenScientists4Parms
+
+# ╔═╡ c0681b31-37b0-42c1-8422-085c8edcb8a7
+modelSevenScientists4Parms = 
+	# scientists A- G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists4Parms(n) | (;x = data7)
+	end # let
+
+# ╔═╡ e771dc37-c328-4a25-8397-ad4812f511db
+chainSevenScientists4Parms = 
+	let iterations = 5000
+		sampler = NUTS(2000, 0.65)
+		# sampler = MH()
+		sample(modelSevenScientists4Parms, sampler, iterations)
+	end # let
+
+# ╔═╡ 17d53559-fbb9-4ba8-9845-d4a0a8cd16d8
+describe(chainSevenScientists4Parms)
+
+# ╔═╡ fd518c1e-8e56-4d29-87a4-b6590760cf53
+plot(chainSevenScientists4Parms)
 
 # ╔═╡ 677eabba-0516-45ee-9752-362a3319d9a8
 md"
 ---
 ###### Summary
 
-The outcomes of our three 4-2-parameter Bayesian models confirm the hypothesis that if we assume a common $\mu$ we only need two different $\sigma$s to model all seven measurements. Clearly, scientist $A$ is an outlier with a fundamental different $\sigma_A >> \sigma_{B,C,D,E,F,G}$.  All other measurements $B, C, D, E, F, G$ can be subsumed by our 3-parameter model. Even scientist $B$ not seems to be a fundamental outlier.
+The outcomes of the progression of our three 2-3-4-parameter Bayesian models confirm the hypothesis that if we assume a common $\mu$ we only need two three $\sigma$s to model all seven measurements. Clearly, scientist $A$ is an outlier with a fundamental different $\sigma_A >> \sigma_B >> \sigma_{C,D,E,F,G}$.  All measurements $A, B, C, D, E, F, G$ can be subsumed by our 4-parameter model. Under this model the parameter $\mu$ stays near McKay's ideal $\mu=10$.
 
 "
 
@@ -1370,13 +1392,14 @@ md"
 
 - **Tarek, M., Xu, K., Trapp, M., Ge, H. & Gharamani, Z.**; *DynamicPPL: Stan-like Speed for Dynamic Probabilistic Models*, 2020, arXiv preprint arXiv:2002.02702, 2020, arxiv.org; last visit 2023/11/27
 
+- **Wikipedia**; [*Gamma distribution*](https://en.wikipedia.org/wiki/Gamma_distribution); last visit 2024/02/01
 "
 
 # ╔═╡ c35c8e43-3ceb-4875-b415-7f06d591d22c
 md"
 ====================================================================================
 
-This is a **draft** under the Attribution-NonCommercial-ShareAlike 4.0 International **(CC BY-NC-SA 4.0)** license. Comments, suggestions for improvement and bug reports are welcome: **claus.moebus(@)uol.de**
+This is a **draft** under the Attribution-NonCommercial-ShareAlike 4.0 International **(CC BY-NC-SA 4.0)** license. Comments, improvement and issue reports are welcome: **claus.moebus(@)uol.de**
 
 ====================================================================================
 "
