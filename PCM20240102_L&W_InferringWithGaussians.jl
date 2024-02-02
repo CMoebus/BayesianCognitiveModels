@@ -21,7 +21,7 @@ md"
 ===================================================================================
 #### Lee & Wagenmakers, ch 4: [Inferring with Gaussians](https://bayesmodels.com/)
 ##### file: PCM20240102\_L&W\_InferringWithGaussians.jl
-##### Julia/Pluto.jl-code (1.10.1/19.36) by PCM *** 2024/02/01 ***
+##### Julia/Pluto.jl-code (1.10.1/19.36) by PCM *** 2024/02/02 ***
 
 ===================================================================================
 "
@@ -1097,6 +1097,9 @@ end # let
 md"
 The plots (above) clearly demonstrate that only the three scientists E,F, and G comprise a group near *MacKay's* ideal $10$ (red vertical line). The addition of scientists B and A spoil this harmony in the sense, that the group's mean is more than two standard deviations apart from *MacKay's* ideal $10$.
 
+$\;$
+$\;$
+
 "
 
 # ╔═╡ 2d36ee23-2c04-47fb-b616-5ef5756ffc5c
@@ -1115,21 +1118,25 @@ let n  = 3:1:7
 	σs = [mean(σPost3), mean(σPost4), mean(σPost5), mean(σPost6), mean(σPost7)]
 	pl1 =
 		begin
-			scatter( n, μs, label=L"μs", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
-			scatter!([7],[μs[5]], label=L"μs", color=:red)
-			plot!(n, μs, label=L"μs")
+			md"
+			$;$
+			$;$
+			"
+			scatter( n, μs, title=L"Sequence of $\mu_s$", label=L"μ_s", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
+			scatter!([7],[μs[5]], label=L"μ_s", color=:red)
+			plot!(n, μs, label=L"μ_s")
 		end # begin
 	pl2 = 
 		begin
-			scatter( n, σs, label=L"σs", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
-			scatter!([7],[σs[5]], label=L"σs", color=:red)
-			plot!(n, σs, label=L"σs")
+			scatter( n, σs, title=L"Sequence of $\sigma_s$", label=L"σ_s", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
+			scatter!([7],[σs[5]], label=L"σ_s", color=:red)
+			plot!(n, σs, label=L"σ_s")
 		end # begin
 	pl3 = 
 		begin 
-			scatter(μs[1:4], σs[1:4], xlabel=L"μs", ylabel=L"σs", label=L"(μs, σs)")
-			scatter!([mean(μPost7)],[mean(σPost7)], label=L"(μs, σs)", color=:red)
-			plot!(μs, σs, label=L"(μs, σs)")
+			scatter(μs[1:4], σs[1:4], title=L"Sequence of $(\mu_s,\sigma_s)$", xlabel=L"μ_s", ylabel=L"σ_s", label=L"(μ_s, σ_s)")
+			scatter!([mean(μPost7)],[mean(σPost7)], label=L"(μ_s, σ_s)", color=:red)
+			plot!(μs, σs, label=L"(μ_s, σ_s)")
 		end # begin
 	plot(pl1, pl2, pl3, layout=(3,1), size=(500, 1000))
 end # let
@@ -1181,19 +1188,22 @@ md"
 The plots demonstrate clearly that scientist $A$ (*red* dots in panels) is an outlier. MacKay's ideal group of scientists with measurements near $10.0$ comprises 3-5 scientists $G-C$. 6th scientist $B$ is a doubtful candidate.
 "
 
-# ╔═╡ 21a38b04-f2d8-4333-8a0f-0b3959705fb6
-md"
+# ╔═╡ 8ca88a7e-7bfc-4d62-af4b-359830ea69b5
+md"""
 ---
-###### 3-Parameter Model $sevenScientists3Parms$
-"
+###### 8-Parameter Model $sevenScientists8Parms$
+
+First we try as Lee & Wagenmakers (2013, p.56f) have done a *full model* with 8-parameter model. At first it seems a bit strange to build a model with more parameters as there a data items. But here we quote Bishop (2009, p.9): "By adopting a *Bayesian* approach, the over-fitting problem can be avoided. We shall see that there is no difficulty from a Bayesian perspective in employing models for which the number of parameters greatly exceeds the number of data points. Indeed, in a Bayesian model the *effective* number of paramters adapts automatically to the size of the data set."
+
+"""
 
 # ╔═╡ 282676df-39a7-4b82-ab22-70e7986e1144
 let α = 5; θ = 2
-	plot(Gamma(α, θ), size=(700, 200), title=L"\Gamma(\alpha=5, \theta=2); \mu=10,\sigma^2=20,\sigma=4.5")
+	plot(Gamma(α, θ), size=(700, 200), title=L"\Gamma(\alpha=5, \theta=2); \mu=10,\sigma^2=20,\sigma=4.5", color=:violet)
 end # let
 
-# ╔═╡ ce855725-f44f-4d06-920c-a966012281da
-@model function sevenScientists3Parms(n)
+# ╔═╡ e805b24b-d6ac-452d-ad8a-02accb100a3b
+@model function sevenScientists8Parms(n)
 	μ0 = 10; σ0 = 10
 	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
 	#------------------------------------------------------------------------------
@@ -1203,45 +1213,40 @@ end # let
 	# Priors
 	μ  ~ Normal(μ0, σ0)                      # informative prior
 	for i in 1:n 
-		if i <= 2
-			σ[i] ~ Gamma(α, θ)               # scientist A, B
-		else
-			σ[i] = σ[2]                      # scientist C ... G = B
-		end # if
+			σ[i] ~ Gamma(α, θ)               # scientist A, B, C, D, E, F, G
 	end # for
 	#------------------------------------------------------------------------------
 	# Gaussian Likelihood
 	for i in 1:n 
-		x[i] ~ Normal(μ, σ[i])               # σ[1], σ[2] are unconstrained
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained
 	end # for
-end # function sevenScientists3Parms
+end # function sevenScientists4Parms
 
-# ╔═╡ da8f87f0-f351-48e5-ba05-d59117fd4a4b
-modelSevenScientists3Parms = 
-	# scientists A - G
+# ╔═╡ ebacb483-157d-4c4f-9a06-c6e8465df8fd
+modelSevenScientists8Parms = 
+	# scientists A- G
 	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
 		n     = length(data7)  # number of data or measurements
-		sevenScientists3Parms(n) | (;x = data7)
+		sevenScientists8Parms(n) | (;x = data7)
 	end # let
 
-# ╔═╡ a9342b19-1ab4-4719-a5b7-84c76db0dca3
-chainSevenScientists3Parms = 
+# ╔═╡ 663d689c-8300-49fe-8dc2-e8a2cb6af351
+chainSevenScientists8Parms = 
 	let iterations = 5000
 		sampler = NUTS(2000, 0.65)
 		# sampler = MH()
-		sample(modelSevenScientists3Parms, sampler, iterations)
+		sample(modelSevenScientists8Parms, sampler, iterations)
 	end # let
 
-# ╔═╡ 1dcfe0e4-bf07-491a-80f0-da30b740eadf
-describe(chainSevenScientists3Parms)
+# ╔═╡ c79ed1f3-5bfe-4a3c-bbbe-41a3f499957f
+describe(chainSevenScientists8Parms)
 
-# ╔═╡ 87f04fe5-1609-4940-9048-46ba1b0a880c
-plot(chainSevenScientists3Parms)
+# ╔═╡ f5b2900d-4322-4d00-8883-b0948f69b24c
+plot(chainSevenScientists8Parms)
 
-# ╔═╡ 60956dc6-b103-4ffa-91f2-00f85c9adf2d
+# ╔═╡ d50a3569-d534-476d-b2fc-fdd5dea21071
 md"
-The posteriors demonstrate the results by introducing an *equality* constraint 
-$\sigma[2] = \sigma[3], ..., \sigma[7]$ which means that scientists *B* - *G* are treated equally.
+We see that $\{\sigma[3], \sigma[4],...,\sigma[7]\}$ are all approximately equal so that we can reduce the number of parameters from 8 to 4 by introducing a constraint $\{\sigma[3] = \sigma[4] =,...,=\sigma[7]\}$.
 "
 
 # ╔═╡ e77c70e8-0a31-4959-92ac-ddfdc8c2cc5d
@@ -1295,6 +1300,64 @@ describe(chainSevenScientists4Parms)
 
 # ╔═╡ fd518c1e-8e56-4d29-87a4-b6590760cf53
 plot(chainSevenScientists4Parms)
+
+# ╔═╡ 21a38b04-f2d8-4333-8a0f-0b3959705fb6
+md"
+---
+###### 3-Parameter Model $sevenScientists3Parms$
+"
+
+# ╔═╡ ce855725-f44f-4d06-920c-a966012281da
+@model function sevenScientists3Parms(n)
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	μ  ~ Normal(μ0, σ0)                      # informative prior
+	for i in 1:n 
+		if i <= 2
+			σ[i] ~ Gamma(α, θ)               # scientist A, B
+		else
+			σ[i] = σ[2]                      # scientist C ... G = B
+		end # if
+	end # for
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], σ[2] are unconstrained
+	end # for
+end # function sevenScientists3Parms
+
+# ╔═╡ da8f87f0-f351-48e5-ba05-d59117fd4a4b
+modelSevenScientists3Parms = 
+	# scientists A - G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists3Parms(n) | (;x = data7)
+	end # let
+
+# ╔═╡ a9342b19-1ab4-4719-a5b7-84c76db0dca3
+chainSevenScientists3Parms = 
+	let iterations = 5000
+		sampler = NUTS(2000, 0.65)
+		# sampler = MH()
+		sample(modelSevenScientists3Parms, sampler, iterations)
+	end # let
+
+# ╔═╡ 1dcfe0e4-bf07-491a-80f0-da30b740eadf
+describe(chainSevenScientists3Parms)
+
+# ╔═╡ 87f04fe5-1609-4940-9048-46ba1b0a880c
+plot(chainSevenScientists3Parms)
+
+# ╔═╡ 60956dc6-b103-4ffa-91f2-00f85c9adf2d
+md"""
+The extension of the *equality* constraint $\{\sigma[3] =, ...,= \sigma[7]\}$ to
+$\{\sigma[2] = \sigma[3] =, ...,= \sigma[7]\}$ seems to be too severe (danger of "underfitting") so that we keep the 4-parameter model as the final model.
+"""
 
 # ╔═╡ 677eabba-0516-45ee-9752-362a3319d9a8
 md"
@@ -1381,6 +1444,7 @@ plot(chainIQ)
 md"
 ---
 ##### References
+- **Bishop, C.M.**; *Pattern Recognition and Machine Learning*; Heidelberg: Springer, 2009
 
 - **Brown, J.D.**; *Linear Models in Matrix Form*, Springer, 2014
 
@@ -3808,20 +3872,27 @@ version = "1.4.1+1"
 # ╠═0a3e1f1e-c80e-451d-a985-979d1c336e45
 # ╠═e3249e2b-2aa3-40c2-9da3-9649759110e4
 # ╟─4592e61e-f76e-41f6-954b-ca4e1caa811c
-# ╟─21a38b04-f2d8-4333-8a0f-0b3959705fb6
-# ╠═282676df-39a7-4b82-ab22-70e7986e1144
-# ╠═ce855725-f44f-4d06-920c-a966012281da
-# ╠═da8f87f0-f351-48e5-ba05-d59117fd4a4b
-# ╠═a9342b19-1ab4-4719-a5b7-84c76db0dca3
-# ╠═1dcfe0e4-bf07-491a-80f0-da30b740eadf
-# ╠═87f04fe5-1609-4940-9048-46ba1b0a880c
-# ╟─60956dc6-b103-4ffa-91f2-00f85c9adf2d
+# ╟─8ca88a7e-7bfc-4d62-af4b-359830ea69b5
+# ╟─282676df-39a7-4b82-ab22-70e7986e1144
+# ╠═e805b24b-d6ac-452d-ad8a-02accb100a3b
+# ╠═ebacb483-157d-4c4f-9a06-c6e8465df8fd
+# ╠═663d689c-8300-49fe-8dc2-e8a2cb6af351
+# ╠═c79ed1f3-5bfe-4a3c-bbbe-41a3f499957f
+# ╠═f5b2900d-4322-4d00-8883-b0948f69b24c
+# ╟─d50a3569-d534-476d-b2fc-fdd5dea21071
 # ╟─e77c70e8-0a31-4959-92ac-ddfdc8c2cc5d
 # ╠═3b3a180c-3150-4c6f-bf08-a065774df9f7
 # ╠═c0681b31-37b0-42c1-8422-085c8edcb8a7
 # ╠═e771dc37-c328-4a25-8397-ad4812f511db
 # ╠═17d53559-fbb9-4ba8-9845-d4a0a8cd16d8
 # ╠═fd518c1e-8e56-4d29-87a4-b6590760cf53
+# ╟─21a38b04-f2d8-4333-8a0f-0b3959705fb6
+# ╠═ce855725-f44f-4d06-920c-a966012281da
+# ╠═da8f87f0-f351-48e5-ba05-d59117fd4a4b
+# ╠═a9342b19-1ab4-4719-a5b7-84c76db0dca3
+# ╠═1dcfe0e4-bf07-491a-80f0-da30b740eadf
+# ╠═87f04fe5-1609-4940-9048-46ba1b0a880c
+# ╟─60956dc6-b103-4ffa-91f2-00f85c9adf2d
 # ╟─677eabba-0516-45ee-9752-362a3319d9a8
 # ╟─bd737dea-25b7-4c30-bb30-5d7c2ed442e8
 # ╟─4f2117d0-0c34-4ddf-96bf-b1f9d5a18f9c
@@ -3831,7 +3902,7 @@ version = "1.4.1+1"
 # ╠═e1bca612-1786-4451-bacf-ba0307cbe0e7
 # ╠═75aaeaca-8745-45da-abec-29a39daa613d
 # ╠═40f4e3c2-43bd-4292-a0e1-9da869f9ffbe
-# ╟─8f2bd59c-df17-494b-944b-7e5f5be5d033
+# ╠═8f2bd59c-df17-494b-944b-7e5f5be5d033
 # ╟─c35c8e43-3ceb-4875-b415-7f06d591d22c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
