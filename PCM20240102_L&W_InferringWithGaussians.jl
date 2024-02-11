@@ -21,7 +21,7 @@ md"
 ===================================================================================
 #### Lee & Wagenmakers, ch 4: [Inferring with Gaussians](https://bayesmodels.com/)
 ##### file: PCM20240102\_L&W\_InferringWithGaussians.jl
-##### Julia/Pluto.jl-code (1.10.1/19.36) by PCM *** 2024/02/02 ***
+##### Julia/Pluto.jl-code (1.10.1/19.36) by PCM *** 2024/02/11 **
 
 ===================================================================================
 "
@@ -38,21 +38,21 @@ md"
 ---
 ###### The *Probability Density Function (PDF)* of a Gaussian
 
-If the *random variable* $Y$ is distributed according to a one-dimensional *Gaussian* we write:
+If the *random variable* $Y$ is distributed according to a one-dimensional *Gaussian* with two *parameters* $\mu_Y$ and $\sigma_Y$ we write:
 
 $Y \sim \mathcal N(\mu_Y, \sigma_Y).$
 
 $\;\;$
 
-The *probability density function (pdf)* of $Y$ is dependent on two *parameters* $\mu_Y$ and $\sigma_Y$. In classical *nonbayesian* statistics parameters are considered to be *fixed*. Kockelkorn (2012, p.201) recommends to designate the dependence on *fixed* instances by a *double bar* $\|$ and on *observed* by a *single* bar $|$:
+The *probability density* function (pdf) $p(Y)$ of $Y$ is then : 
 
-$f_{\mathcal N}(Y\|\mu_Y,\sigma_Y) = \mathcal N(Y\|\mu_Y, \sigma_Y^2)$
+$p_{\mathcal N}(Y) = \mathcal N(Y | \mu_Y, \sigma_Y).$
 
 $\;\;$
 
 The *Gaussian* density of a single datum $Y=y_i$ is:
 
-$f_{\mathcal N}(Y=y_i\|\mu_Y,\sigma_Y) = \mathcal N(y_i\|\mu_Y, \sigma_Y^2)=\frac{1}{\sigma_Y\sqrt{2\pi}}exp\left[-\frac{1}{2}\left(\frac{y_i-\mu_Y}{\sigma_Y}\right)^2\right].$
+$f_{\mathcal N}(Y=y_i |\mu_Y,\sigma_Y) = \mathcal N(y_i |\mu_Y, \sigma_Y^2)=\frac{1}{\sigma_Y\sqrt{2\pi}}exp\left[-\frac{1}{2}\left(\frac{y_i-\mu_Y}{\sigma_Y}\right)^2\right].$
 
 $\;\;$
 $\;\;$
@@ -75,7 +75,7 @@ end # let
 # ╔═╡ f3709624-e2bd-4309-afff-45cb2f6834ce
 # Brown, J.D., Linear Models in Matrix Form, 2014, p.70
 let ys = range(55.0, 145.0, 100)
-	plot(ys, myGaussianDensity.(ys, μ=100.0, σ=15.0),xlabel=L"Y=y", ylabel="Density", label=L"N(100.0, 15.0)", size=(700, 300), title=L"Density of Gaussian $y \sim N(100.0, 15.0)$", lw=2)
+	plot(ys, myGaussianDensity.(ys, μ=100.0, σ=15.0),xlabel=L"Y=y", ylabel="Density", label=L"N(100.0, 15.0)", size=(700, 300), title=L"Density of Nonstandard Gaussian $y \sim N(\mu \ne 0, \sigma \ne 1)$", lw=2)
 	plot!([100.0, 100.0], [0.0, myGaussianDensity(100.0, μ=100.0, σ=15.0)] , label=L"\mu_Y=100.0", color=:red)
 	plot!([85.0, 85.0], [0.0, myGaussianDensity(85.0, μ=100.0, σ=15.0)], label=L"\mu_Y-\sigma_Y=85.0", color=:red, linestyle=:dash)
 	plot!([115.0, 115.0], [0.0, myGaussianDensity(115.0, μ=100.0, σ=15.0)], label=L"\mu_Y+\sigma_Y=115.0", color=:red, linestyle=:dashdot)
@@ -85,15 +85,26 @@ end # let
 # ╔═╡ 2e6910bd-ea27-419c-9b35-ea160fbe1c03
 md"
 ---
-###### Densities for 12 i.i.d. Values $y_i \sim \mathcal N(\mu_Y=100, \sigma_Y=15)\text{ ;; }\; i=1,...,12$
+###### Example: Densities for 12 i.i.d. Gaussian Values
 (cf. Brown, 2014, Fig. 3.1, p.70)
+
+$\;$
+
+$y_i \sim \mathcal N(\mu_Y=100, \sigma_Y=15)\text{ ;; }\; i=1,...,12$
+
+or
+
+$p_{\mathcal N}(Y)=f_{\mathcal N}(Y=y_i) = \mathcal N(Y=y_i|\mu_Y=100, \sigma_Y=15)$
+
+$\;$
+
 "
 
 # ╔═╡ 018a4c16-4f0c-4a13-8aac-1f4341e858af
 # cf. Brown, 2014, Fig. 3.1, p.70
 dataFrameGauss =  
 	let ys   = [75, 87, 89, 90, 93, 99, 100, 101, 103, 112, 116, 135] # data
-		fgds = myGaussianDensity.(ys, μ=100, σ=15.0)                  # densities
+		fgds = myGaussianDensity.(ys, μ=100, σ=15)                    # densities
 		DataFrame(ys=ys, fys=fgds)
 	end # let
 
@@ -398,6 +409,7 @@ let ys = dataFrameGauss.ys
 	plot!(ys, fys, label=missing)
 	scatter!(μs98To102, logLikelihoods98To102, label=L"lLG(μ, σ=15, ys)", color=:red)
 	scatter!(μs98To102, [minLogLikelihood97To103+0.001], label=false, color=:red)
+	#--------------------------------------------------------------------------------
 end # let
 
 # ╔═╡ 4c4e5935-7ad8-497a-b277-e8b5cebaac50
@@ -409,20 +421,32 @@ contour(95.0:0.1:105, 10.0:0.1:20.0,
 let ys  = dataFrameGauss.ys
 	n   = length(ys)
 	σ  = 15.0
+	logLikelihoods97To103 = 
+		[logLikelihoodGaussian(μ, σ, ys) for μ in 97:0.1:103]
 	sampleVariance(ys) = 
 		let ssq = sum([y^2 for y in ys])
 			ssq/n - mean(ys)^2
 		end # let
 	μs97To103 = [μ for μ in 97.0:0.1:103.0]
 	μs98To102 = [μ for μ in 98.0:1.0:102.0]
+	minLogLikelihood97To103 = min(logLikelihoods97To103...)
+	maxLogLikelihood97To103 = max(logLikelihoods97To103...)*0.999
 	ybar = mean(ys)                       # sample mean
 	s2  = sampleVariance(ys)              # sample variance
 	logLikelihoods97To103 = 
 		[logLikelihoodGaussian(μ, σ, ybar, s2, n) for μ in μs97To103]  
 	logLikelihoods98To102 = 
 		[logLikelihoodGaussian(μ, σ, ybar, s2, n) for μ in μs98To102] 
-	plot(μs97To103, logLikelihoods97To103, title=L"$logLikelihood$ Based on Sufficient Statistics and $σ=15$", label=L"$lLG(μ, σ=15, ybar, s2, n)$")
+	#--------------------------------------------------------------------------------
+	plot(μs97To103, logLikelihoods97To103,  xlimits=(97, 103), ylimits=(minLogLikelihood97To103, maxLogLikelihood97To103), lw=2, title=L"$logLikelihood$ Based on Sufficient Statistics and $σ=15$", label=L"$lLG(μ, σ=15, ybar, s2, n)$")
 	scatter!(μs98To102, logLikelihoods98To102, label=L"$lLG(μ_i, σ=15, ybar, s2, n)$")
+	#--------------------------------------------------------------------------------
+	(ys, fys)   =  
+		makeZigZagLine(μs98To102, logLikelihoods98To102, yMin=minLogLikelihood97To103)
+	plot!(ys, fys, label=missing)
+	scatter!(μs98To102, logLikelihoods98To102, label=L"lLG(μ, σ=15, ys)", color=:red)
+	scatter!(μs98To102, [minLogLikelihood97To103+0.001], label=false, color=:red)
+	#--------------------------------------------------------------------------------
 end # let
 
 # ╔═╡ f963f722-fcaa-4845-85ca-da6ffabf9a8f
@@ -540,7 +564,7 @@ md"
 "
 
 # ╔═╡ 0718dd7c-a7fb-4e8b-ac81-f009fdf6a516
-@variables μ, σ, n, s2, ybar
+@variables μ σ n s2 ybar
 
 # ╔═╡ 4278d61a-a7fc-455c-a637-725d630899c0
 Dμ = Differential(μ)
@@ -549,9 +573,11 @@ Dμ = Differential(μ)
 Dσ = Differential(σ)
 
 # ╔═╡ eca1c59d-fefd-4212-a5e4-23f5eaa05fba
-z = (-n*log(σ*√(2*π))-n/(2*σ^2)*(s2+(ybar-μ)^2))
+z = 
+	(-n*log(σ*√(2*π))-n/(2*σ^2)*(s2+(ybar-μ)^2))
 
 # ╔═╡ 37579b2c-0c61-4760-b010-fc2b200a597a
+
 Dμ(z)
 
 # ╔═╡ 77a9e333-77c9-4d14-ba49-320d0dd71f3e
@@ -715,22 +741,34 @@ end # begin
 md"
 ---
 ##### 4.2 The Seven Scientists
-(MacKay, [2003, exercise 22.15, p. 309](https://www.inference.org.uk/itprnn/book.pdf); Lee & Wagenmakers, [2013, ch. 4.2, p.56-58](https://bayesmodels.com/))
+(MacKay, [2003, p. 309](https://www.inference.org.uk/itprnn/book.pdf); Lee & Wagenmakers, [2013, ch. 4.2, p.56-58](https://bayesmodels.com/))
 
-MacKay (2003, p.309) presents in chapter 22 *Maximum Likelihood and Clustering* in *Exercise 22.15* the problem of *The seven scientists*: 
+MacKay (2003) presents in chapter 22 *Maximum Likelihood and Clustering* in *Exercise 22.15* the problem of *The seven scientists*: 
 
 *N datapoints $\{x_n\}$ are drawn from N distributions, all of which are Gaussian with a common mean $\mu$ but with different unknown standard deviations $\sigma_n$. What are the maximum likelihood parameters $\mu, \{\sigma_n\}$ given the data ? For example, seven scientists $(A, B, C, D, E, F, G)$ with wildly-differing experimental skills measure $\mu$. You expect some of them to do accurate work (i.e., to have small $\sigma_n$), and some of them to turn in wildly innacurate answers (i.e., to have enormous $\sigma_n$). Figure 22.9 shows their seven results. What is $\mu$, and how reliable is each scientist?*
 
-*I hope you agree that, intuitively, it looks pretty certain that A and B are both inept measurers, that D-G are better, and that the true value of $\mu$ is somewher close to 10. But what does maximizing the likelihood tell you?* 
-
-$\;\;$
-$\;\;$
+*I hope you agree that, intuitively, it looks pretty certain that A and B are both inept measurers, that D-G are better, and that the true value of $\mu$ is somewher close to 10. But what does maximizing the likelihood tell you?* (MacKay, 2003, exercise 22.15, p. 309).
 
 "
+
+# ╔═╡ 22f6fd48-6ee7-4cba-b9b6-439809b7a090
+md"""
+---
+###### Our Modeling Approach
+
+- First, we make several *explorative* models with 2, 3, 4, 5, 6, 7, 8 parameters. The 8 parameter model has some similarity with Lee & Wagenmaker's (2013). 
+
+- Second, we make some *pairwise* Bayesian model comparisons on the basis of *posterior odds* or *Bayes factors* (Murphy, 2022, p.175). This is called "Bayesian Hypothesis Testing" (Murphy, 2022, ch.5.2.1).
+
+- Third, we make a *Bayesian Model Comparison* and *Selection* (Murphy, 2022, ch. 5.2.2) in *one* run with a full set of four *nested* models. This is achieved by a *hierarchical* Bayesian Model with four submodels each representing a single hypothesis.
+
+"""
 
 # ╔═╡ 46c9a9b2-3988-4e76-9bf9-f39b421a57bd
 md"
 ---
+##### Descriptive Statistics and Explorative Models
+
 ###### Seven Measurements $\{x_n\}$ (MacKay, 2003, Fig. 22.9, p.309)
 
 $data = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]$
@@ -765,31 +803,48 @@ Lee & Wagenmakers (2013, ch.4.2, p.56f) write: *This problem is from MacKay (200
 
 Despite their statement above they present as a solution proposal only a graphical model in *plate* notation and a WinBUGS script without (!) estimation results.
 
-Their graphical model (L&W, 2013, Fig. 4.2, p.56) and their WinBUGS *script* (L&W, 2013, p.56f) contains 8 (!) parameter: $\mu$ and $\sigma_1, ... , \sigma_7$. As a consequence the model is *underconstrained*.
+Their graphical model (L&W, 2013, Fig. 4.2, p.56) and their WinBUGS *script* (L&W, 2013, p.56f) contains 8 (!) parameter ($\mu$ and $\sigma_1, ... , \sigma_7$). As a consequence their model is *underconstrained* with tendency of *overfitting*.
 
 "
 
 # ╔═╡ 7a3974a3-98c6-4d38-96c3-074cb6625591
 md"
-###### Our Model Function SevenScientists
-Our modeling approach will be slightly different from Lee & Wagenmakers'. Because we retain MacKay's data set with only *one* measurement per scientist we have to reduce the number of parameters. So we present a *two*, a *four*, and a *three*-parameter model.
+###### Our Model Function $SevenScientists$
+Our modeling approach will be slightly different from Lee & Wagenmakers'. Because we retain MacKay's data set with only *one* measurement per scientist we have to reduce the number of parameters. So we present first exploraty models containing two to four parameers.
 
-In all models we replace Lee & Wagemakers' *uninformative* prior by an *informative* one. 
+In all models we replace Lee & Wagemakers' *uninformative* prior $Gamma(\alpha=0.001, \beta=0.001)$ by an *informative* one. Since WinBugs uses a different parametrization than the function $Gamma(,,,)$ in $Distributions.jl$ we display their prior in our parametrization (see below). 
 
-Models represent nested hypotheses:
+The WinBugs script (Lee & Wagenmakers, 2013, p.57) uses a prior for $\sigma^2$ in the BUGS' parametrization (Lunn et al., 2013, p.345):
 
-- The *two*-parameter model is only explorative. It represents the unrealistic hypothesis, that *all* measurements stem from *one* distribution with parameters $\mu, \sigma$. 
+$\mu = \frac{\alpha}{\beta} = 1.0\text{ and } \sigma^2 = \frac{\alpha}{\beta^2} = 1000$
 
-- The *four*-parameter model represents a more permissive hypothesis with a *common* mean $\mu$ for all scientists and three *different* means $\mu(\sigma_i)\text{ for }i=1,2,3-7$
+$\;$
+$\;$
 
-- The *three*-parameter model derives by a further equality constraint between parameters of the *four*-parameter model. So we have as free varying parameters a *common* mean $\mu$ for all scientists and two *different* means $\mu(\sigma_i)\text{ for }i=1,2-7$
+This is in our parametrization $Gamma(\alpha=0.001, \beta=1000.0)$ with
+
+$\mu = \alpha\cdot\beta = 1.0\text{ and } \sigma^2 = \alpha \cdot \beta^2 = 0.001\cdot 10000 = 1000$
+
+$\;$
+$\;$
+
+Lee & Wagenmaker's uninformed prior for $\sigma^2$ but in our reparametrization is displayed below.
 
 "
+
+# ╔═╡ 0be23ace-6a25-4912-b4c6-8282af692fa1
+# Lee & Wagenmaker's prior translated to our parametrization
+let α = 0.001; θ  = 1000.0   
+	plot(Gamma(α, θ), size=(700,500), xlimits=(0, 10), ylimits=(-0.001, 0.015), lw=2, title=L"Lee & Wagenmakers Uninformed Prior $\Gamma(α=0.001, 1/θ=0.001)$",label=L"\Gamma(α=0.001, θ=1000.0)")
+	hline!([0.0], label=false, color=:black)
+end # let
 
 # ╔═╡ 58dc7c54-cef6-4d26-bfb5-805396a4c29e
 md"
 ---
 ###### Exploration of Different Parametrizations of $Gamma$-Priors
+
+Because we have stronger beliefs about the measurement errors of the 7 scientists we think that informative priors are justified. To gain more insight about possible parametrizations of $Gamma.jl$ we reconstruct relevant graphs of Wikipedia (see below).
 "
 
 # ╔═╡ 7a400bb0-2d03-49c2-856e-22242a8c3f0e
@@ -819,14 +874,38 @@ let α1 = 1.0; θ1  = 1.0
 	α5 = 5.0; θ2  = 2.0
 	α10 = 10.0; 
 	α15 = 15.0
-	plot(Gamma(α1, θ1), size=(700,500), xlimits=(0, 30), ylimits=(-0.02, 1.0), title=L"$\Gamma(α, θ)$",label=L"\Gamma(α=1, θ=1)")
-	plot!(Gamma(α3,  θ05),  label=L"\Gamma(α=3, θ=0.5)")
-	plot!(Gamma(α5,  θ05), label=L"\Gamma(α=5,  θ=0.5)")
-	plot!(Gamma(α5,  θ2),  label=L"\Gamma(α=5,  θ=2)")
-	plot!(Gamma(α10, θ05), label=L"\Gamma(α=10, θ=0.5)")
-	plot!(Gamma(α15, θ1),  label=L"\Gamma(α=15, θ=1)")
+	plot(Gamma(α1, θ1), size=(700,500), xlimits=(0, 30), ylimits=(-0.02, 1.0),  lw=2, title=L"$\Gamma(α, θ)$",label=L"\Gamma(α=1, θ=1)")
+	plot!(Gamma(α3,  θ05), lw=2, label=L"\Gamma(α=3, θ=0.5)")
+	plot!(Gamma(α5,  θ05), lw=2, label=L"\Gamma(α=5,  θ=0.5)")
+	plot!(Gamma(α5,  θ2),  lw=2, label=L"\Gamma(α=5,  θ=2)")
+	plot!(Gamma(α10, θ05), lw=2, label=L"\Gamma(α=10, θ=0.5)")
+	plot!(Gamma(α15, θ1),  lw=2, label=L"\Gamma(α=15, θ=1)")
 	hline!([0.0], label=false, color=:black)
 end # let
+
+# ╔═╡ 642ab5b6-ef50-404b-be67-ed06010d93b8
+md"
+----
+For the informative prior of our *Gamma*-distribution we choose $Gamma(\alpha=5,\theta=2)$. By this parametrization compared to Lee & Wagenmakers $\mu$ grows from $1.0$ to $10.0$ and $\sigma$ shrinks from $\sqrt{1000.0}=31.6$ to $\sqrt{20.0}=4.5$.
+"
+
+# ╔═╡ 282676df-39a7-4b82-ab22-70e7986e1144
+let α = 5; θ = 2
+	plot(Gamma(α, θ), size=(700, 200), lw=2, title=L"\Gamma(\alpha=5, \theta=2); \mu=10,\sigma^2=20,\sigma=4.5", color=:violet)
+end # let
+
+# ╔═╡ a419cc9c-ae35-4dfa-bb73-d6c6e2642b08
+md"
+
+Our Bayesian Models represent nested hypotheses:
+
+- The *two*-parameter model is only explorative. It represents the unrealistic hypothesis, that *all* measurements stem from *one* distribution with parameters $\mu, \sigma$. 
+
+- The *four*-parameter model represents a more permissive hypothesis with a *common* mean $\mu$ for all scientists and three *different* means $\mu(\sigma_i)\text{ for }i=1=A,i=2=B,i=3=C$. The extent of the equality constraint is $\sigma[3]=...\sigma[7]$
+
+- The *three*-parameter model is derived from the *four*-parameter model by a further equality constraint. The extent of the new equality constraint is $\sigma[2]=...\sigma[7]$
+
+"
 
 # ╔═╡ 9b0cdc90-b9be-4beb-8c24-7f03702c9c33
 md"
@@ -834,6 +913,8 @@ md"
 ###### 2-Parameter Model Function $sevenScientists2Parms$ with *Informative* Prior*
 
 The function's name $sevenScientists2Parms$ carries a postfix $2Parms$ because it contains a *reduced* number of parameters, here namely $\mu, \sigma$.
+
+We apply this most restricted model sequentially to the measurement data of 3 to 7 scientists.
 "
 
 # ╔═╡ 2e247173-753f-42c7-ba09-7b2f30431cd2
@@ -1047,6 +1128,9 @@ describe(chainSevenScientists7Data)
 # ╔═╡ 399fd7f0-e1ef-4335-9c7b-06c7c4c7ee7f
 plot(chainSevenScientists7Data)
 
+# ╔═╡ 31b57e81-e276-421f-ba15-da4ec3ca9666
+maxLogDensity2Parms = maximum(chainSevenScientists7Data[:log_density])
+
 # ╔═╡ 2847a69b-fe97-4359-9312-2739c43534e3
 let μPost3 = chainSevenScientists3Data[:μ]
 	σPost3 = chainSevenScientists3Data[:σ]
@@ -1124,22 +1208,30 @@ let n  = 3:1:7
 			"
 			scatter( n, μs, title=L"Sequence of $\mu_s$", label=L"μ_s", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
 			scatter!([7],[μs[5]], label=L"μ_s", color=:red)
-			plot!(n, μs, label=L"μ_s")
+			plot!(n, μs, lw=2, label=L"μ_s")
 		end # begin
 	pl2 = 
 		begin
 			scatter( n, σs, title=L"Sequence of $\sigma_s$", label=L"σ_s", xlabel=L"3:E-G;4:D-G;5:C-G;6:B-G;7:A-G")
 			scatter!([7],[σs[5]], label=L"σ_s", color=:red)
-			plot!(n, σs, label=L"σ_s")
+			plot!(n, σs, lw=2, label=L"σ_s")
 		end # begin
 	pl3 = 
 		begin 
 			scatter(μs[1:4], σs[1:4], title=L"Sequence of $(\mu_s,\sigma_s)$", xlabel=L"μ_s", ylabel=L"σ_s", label=L"(μ_s, σ_s)")
 			scatter!([mean(μPost7)],[mean(σPost7)], label=L"(μ_s, σ_s)", color=:red)
-			plot!(μs, σs, label=L"(μ_s, σ_s)")
+			plot!(μs, σs, lw=2, label=L"(μ_s, σ_s)")
 		end # begin
 	plot(pl1, pl2, pl3, layout=(3,1), size=(500, 1000))
 end # let
+
+# ╔═╡ 4592e61e-f76e-41f6-954b-ca4e1caa811c
+md"
+The plots demonstrate clearly that scientist $A$ (*red* dots in panels) is an outlier. MacKay's ideal group of scientists with measurements near $10.0$ comprises 3-5 scientists $G-C$. Scientist $B$ is a doubtful candidate for outlierism.
+
+From this exploratory data analysis we conclude that we need at least 3 parameters $\mu, \sigma[1], \sigma[2]$. $\sigma[1]$ describing scientist *A* and $\sigma[2]$ the rest. Because scientist *B* is a doubtful outlier it can be possible that a further separate $\sigma[2]$ is necessary for a 4-parameter model.
+
+"
 
 # ╔═╡ 6f2ce6c4-2bc8-4de2-b3b4-c9d968dac47e
 begin 
@@ -1183,24 +1275,61 @@ let μs = [mean(μPost3), mean(μPost4), mean(μPost5), mean(μPost6), mean(μPo
 	     cov_μs_σs vars[2]]
 end # let
 
-# ╔═╡ 4592e61e-f76e-41f6-954b-ca4e1caa811c
-md"
-The plots demonstrate clearly that scientist $A$ (*red* dots in panels) is an outlier. MacKay's ideal group of scientists with measurements near $10.0$ comprises 3-5 scientists $G-C$. 6th scientist $B$ is a doubtful candidate.
-"
-
 # ╔═╡ 8ca88a7e-7bfc-4d62-af4b-359830ea69b5
 md"""
 ---
+##### *Pairwise* Bayesian Model Comparisons
+
 ###### 8-Parameter Model $sevenScientists8Parms$
 
-First we try as Lee & Wagenmakers (2013, p.56f) have done a *full model* with 8-parameter model. At first it seems a bit strange to build a model with more parameters as there a data items. But here we quote Bishop (2009, p.9): "By adopting a *Bayesian* approach, the over-fitting problem can be avoided. We shall see that there is no difficulty from a Bayesian perspective in employing models for which the number of parameters greatly exceeds the number of data points. Indeed, in a Bayesian model the *effective* number of paramters adapts automatically to the size of the data set."
+First we estimate 8-parameter model similar but not identical to Lee & Wagenmakers' (2013, p.56f). This plays the role of a *full* unrestricted model. It seems a bit strange to build a model with more parameters than there a data items. 
+
+But here we quote Bishop (2009, p.9): "By adopting a *Bayesian* approach, the over-fitting problem can be avoided. We shall see that there is no difficulty from a Bayesian perspective in employing models for which the number of parameters greatly exceeds the number of data points. Indeed, in a Bayesian model the *effective* number of paramters adapts automatically to the size of the data set."
+
+This means that *ineffective* model-complexity is automatically penalized in *Bayesian model comparisons* thus implementing the scientific principle of *Occam's razor* (MacKay, 2003, ch. 28, p.343-355).
+
+In our model comparisons we compare model-specific MAPs. Under the assumption of equal model-specific priors this is equal to the pair-specific *Bayes factor*. Then we we evaluate the model plausability by comparing this ratio with a reference scale first published by Jeffrey (Jeffrey, 1961; Lee & Wagenmakers, 2013, p.105). In the implementation of the function $pairwiseModelComparison$ we denote scale steps using Murphys wordings (Murphy, 2012, p. 163; 2022, p.176).
 
 """
 
-# ╔═╡ 282676df-39a7-4b82-ab22-70e7986e1144
-let α = 5; θ = 2
-	plot(Gamma(α, θ), size=(700, 200), title=L"\Gamma(\alpha=5, \theta=2); \mu=10,\sigma^2=20,\sigma=4.5", color=:violet)
-end # let
+# ╔═╡ 4ab12f05-4215-4843-99f8-027eca52aee6
+md"
+###### Model Plausability in a Pair of Models
+
+The compact verbalized rule is (Held & Bové, 2014, p.232):
+
+$Posterior Odds = Bayes Factor \cdot Prior Odds$
+
+$\;$
+
+and more formal:
+
+$\;$
+
+$\frac{p(M_1|\mathcal D)}{p(M_2|\mathcal D)} = \frac{p(\mathcal D | M_1)}{p(\mathcal D | M_2)} \cdot \frac{p(M_1)}{p(M_2)}$
+
+$\;$
+$\;$
+$\;$
+
+where: $M_i$ is a *binary* variable $M_i \in {1,2}$ designating a model
+and: $\mathcal D$ is the *data set*
+
+$\;$
+$\;$
+
+The *Bayes Factor* is thus
+
+$\;$
+
+$Bayes Factor = \frac{Posterior Odds}{Prior Odds} = Posterior Odds \cdot Prior Odds^{-1}$
+
+$\;$
+$\;$
+
+Under the assumption of equal priors the *Bayes factor* is equal to the *posterior odds*. All terms in the odds equation are *marginal* which means that all parameters are summed or integrated our.
+
+"
 
 # ╔═╡ e805b24b-d6ac-452d-ad8a-02accb100a3b
 @model function sevenScientists8Parms(n)
@@ -1220,7 +1349,7 @@ end # let
 	for i in 1:n 
 		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained
 	end # for
-end # function sevenScientists4Parms
+end # function sevenScientists8Parms
 
 # ╔═╡ ebacb483-157d-4c4f-9a06-c6e8465df8fd
 modelSevenScientists8Parms = 
@@ -1301,6 +1430,46 @@ describe(chainSevenScientists4Parms)
 # ╔═╡ fd518c1e-8e56-4d29-87a4-b6590760cf53
 plot(chainSevenScientists4Parms)
 
+# ╔═╡ df5358a4-b336-4b1d-a85e-cbbc5561ef79
+md"""
+###### Ratio of MAP-posterior gives "very strong evidence" for the 4-Parameter Model in Comparison to the 8-Parameter Model
+"""
+
+# ╔═╡ 07287701-177a-4ba5-be3e-bdac478e89d6
+maxLogDensity8Parms = maximum(chainSevenScientists8Parms[:log_density])
+
+# ╔═╡ e6155f60-6262-4b80-9f46-f8c48e122a5f
+maxLogDensity4Parms = maximum(chainSevenScientists4Parms[:log_density])
+
+# ╔═╡ 21604380-4eeb-47c9-805a-e266264fe905
+function pairwiseModelComparison(chain1, chain2)
+	let maxLogDensity1 = maximum(chain1[:log_density])
+		maxLogDensity2 = maximum(chain2[:log_density])
+		diff  = maxLogDensity1 - maxLogDensity2
+		ratio = exp(diff)
+		interpretation =
+			100.0  < ratio         ? "=> decisive evidence for M1" : 
+			10.0   < ratio < 100.0 ? "=> strong evidence for M1"   :
+			3.0    < ratio < 10.0  ? "=> moderate evidence for M1" :
+			1.0    < ratio < 3.0   ? "=> weak evidence for M1"     :
+			#-------------------------------------------------------
+			1/3    < ratio < 1.0   ? "=> weak evidence for M2"     :
+			1/10   < ratio < 1/3   ? "=> moderate evidence for M2" :
+			1/100  < ratio < 1/10  ? "=> strong evidence for M2"   :
+			ratio  < 1/100         ? "=> decisive evidence for M2" : 
+			error("undefined case $ratio")
+		ratio, interpretation
+	end # let
+end # function pairwiseModelComparison
+
+# ╔═╡ 7c17ac4c-fa32-444e-8014-fe6c685d80e5
+pairwiseModelComparison(chainSevenScientists8Parms, chainSevenScientists4Parms)
+
+# ╔═╡ 44be7383-f438-4950-8b6a-76e7679f9fcf
+md"""
+This means "=> strong evidence for M2 = 4-parameter model".
+"""
+
 # ╔═╡ 21a38b04-f2d8-4333-8a0f-0b3959705fb6
 md"
 ---
@@ -1353,19 +1522,511 @@ describe(chainSevenScientists3Parms)
 # ╔═╡ 87f04fe5-1609-4940-9048-46ba1b0a880c
 plot(chainSevenScientists3Parms)
 
+# ╔═╡ baafced4-a13d-4fce-8f69-c158b2563768
+md"""
+###### Ratio of MAP-posterior gives "weak evidence" for the 4-Parameter Model in Comparison to the 3-Parameter Model
+"""
+
+# ╔═╡ d261284d-b3ed-461f-b41c-08f2c04eaee9
+maxLogDensity3Parms = maximum(chainSevenScientists3Parms[:log_density])
+
 # ╔═╡ 60956dc6-b103-4ffa-91f2-00f85c9adf2d
 md"""
 The extension of the *equality* constraint $\{\sigma[3] =, ...,= \sigma[7]\}$ to
 $\{\sigma[2] = \sigma[3] =, ...,= \sigma[7]\}$ seems to be too severe (danger of "underfitting") so that we keep the 4-parameter model as the final model.
 """
 
-# ╔═╡ 677eabba-0516-45ee-9752-362a3319d9a8
+# ╔═╡ 5b81b9ed-a039-4e9c-8da2-1442226ddfe2
+pairwiseModelComparison(chainSevenScientists4Parms, chainSevenScientists3Parms)
+
+# ╔═╡ 90422f78-f8e5-4c9d-b99b-4863ffb2e349
+md"""
+This means "=> weak evidence for M1 = 4-parameter model".
+"""
+
+# ╔═╡ d22d3580-ead8-41e7-a37f-9ccfd1af8f3e
 md"
 ---
-###### Summary
+##### Bayesian Model Comparisons by Hierarchical Models
+Now we put each model as submodels into *one* hierarchical supermodel. The evidence for each submodel can be read off from the posterior probabilities for the model selection parameters $p$ and $model$.
+"
 
-The outcomes of the progression of our three 2-3-4-parameter Bayesian models confirm the hypothesis that if we assume a common $\mu$ we only need two three $\sigma$s to model all seven measurements. Clearly, scientist $A$ is an outlier with a fundamental different $\sigma_A >> \sigma_B >> \sigma_{C,D,E,F,G}$.  All measurements $A, B, C, D, E, F, G$ can be subsumed by our 4-parameter model. Under this model the parameter $\mu$ stays near McKay's ideal $\mu=10$.
+# ╔═╡ 644ac369-0f5d-4407-8683-92901f0eb585
+md"
+---
+###### 8- vs. 2-Parameter Model
+"
 
+# ╔═╡ f84653af-f31b-473b-a9df-cc22628bf418
+@model function sevenScientists8vs2Parms(n)
+	# Hyperparameter
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	p ~ Beta(1, 1)                           # preference for model m1 or m2
+	μ ~ Normal(μ0, σ0)                       # informative common prior
+	σCommon ~ Gamma(α, θ)                    # informative common prior
+	model ~ Bernoulli(p)                     # selection of model
+	if model == 0
+		# evidence for 8-parameter model
+		for i in 1:n  
+			σ[i] ~ Gamma(α, θ)               # no σ is constrained to be equal
+		end # for
+	elseif model == 1
+		# evidence for 2-parameter model
+		for i in 1:n  
+			σ[i] = σCommon                   # all σs are constrained to be equal
+		end # for
+	else
+		println("error")
+	end # if
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained   
+	end # for
+end # function sevenScientists8vs2Parms
+
+# ╔═╡ 0d6dd01c-50d7-4944-aff6-2f7afcc3c518
+modelSevenScientists8vs2Parms = 
+	# scientists A- G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists8vs2Parms(n) | (;x = data7)
+	end # let
+
+# ╔═╡ 5cc7aa6e-c388-4e42-83e7-f4d1134d86f8
+chainSevenScientists8vs2Parms = 
+	let iterations = 5000
+		# sampler = Prior()
+		# sampler = MH()
+		# sampler = NUTS(2000, 0.65)
+		sampler = PG(10)
+		sample(modelSevenScientists8vs2Parms, sampler, iterations)
+	end # let
+
+# ╔═╡ 5b5f99cb-9a7f-4e7a-b330-9b7a48ed8174
+describe(chainSevenScientists8vs2Parms)
+
+# ╔═╡ 5edb1bf5-fbab-4e1e-8d88-4b25d136a7b0
+plot(chainSevenScientists8vs2Parms)
+
+# ╔═╡ d41ff2e4-0eea-4976-8f43-22cfe96b105b
+histogram(chainSevenScientists8vs2Parms[:model])
+
+# ╔═╡ 3bad9320-0fb8-49d7-8c30-7ea39e56398a
+md"
+Posterior variables $:p$ and $:model$ provide clear evidence in favor of the 8-Parameter Model.
+"
+
+# ╔═╡ 159fbfb7-cecf-4521-8dff-c8ea78e7aae8
+md"
+---
+###### 8- vs. 4-Parameter Model
+"
+
+# ╔═╡ bd2b2201-9da1-499f-8875-9f9bb1526061
+@model function sevenScientists8vs4Parms(n)
+	# Hyperparameter
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	p ~ Beta(1, 1)                           # preference for model m1 or m2
+	μ ~ Normal(μ0, σ0)                       # informative common prior
+	σCommon ~ Gamma(α, θ)                    # informative common prior
+	model ~ Bernoulli(p)
+	if model == 0
+		# evidence for 8-parameter model
+		for i in 1:n  
+			σ[i] ~ Gamma(α, θ)               # no σ is constrained to be equal
+		end # for
+	elseif model == 1
+		# evidence for 4-parameter model
+		for i in 1:n 
+			if i <= 3
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[3]                  # scientist D ... G = C
+			end # if
+		end # for
+	else
+		println("error")
+	end # if
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained   
+	end # for
+end # function sevenScientists8vs4Parms
+
+# ╔═╡ 73371764-0177-45a9-a393-733b75ee623b
+modelSevenScientists8vs4Parms = 
+	# scientists A- G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists8vs4Parms(n) | (;x = data7)
+	end # let
+
+# ╔═╡ 93fbdaaf-cbec-44f8-8014-b55893cdc034
+chainSevenScientists8vs4Parms = 
+	let iterations = 10000
+		# sampler = Prior()
+		# sampler = MH()
+		# sampler = NUTS(2000, 0.65)
+		sampler = PG(10)
+		sample(modelSevenScientists8vs4Parms, sampler, iterations)
+	end # let
+
+# ╔═╡ d69d7a15-457a-4102-98d2-ccf8da77322c
+describe(chainSevenScientists8vs4Parms)
+
+# ╔═╡ aea75546-7cb2-4ca4-bc3e-fe13d8630077
+histogram(chainSevenScientists8vs4Parms[:model])
+
+# ╔═╡ 8142d902-56f8-439c-a54d-768d38da3e64
+md"
+Posterior variables $:p$ and $:model$ provide clear evidence in favor of the 4-Parameter Model.
+"
+
+# ╔═╡ b1ed0cab-1f74-49d5-ae75-848c50db45ce
+md"
+---
+###### 4- vs. 3-Parameter Model
+"
+
+# ╔═╡ d091f49f-ea21-4658-8ed8-f5e37e4191d2
+@model function sevenScientists4vs3Parms(n)
+	# Hyperparameter
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	p ~ Beta(1, 1)                           # preference for model m1 or m2
+	μ ~ Normal(μ0, σ0)                       # informative common prior
+	σCommon ~ Gamma(α, θ)                    # informative common prior
+	model ~ Bernoulli(p)
+	if model == 0
+		# evidence for 4-parameter model
+		for i in 1:n 
+			if i <= 3
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[3]                  # scientist D ... G = C
+			end # if
+		end # for
+	elseif model == 1
+		# evidence for 3-parameter model
+		for i in 1:n 
+			if i <= 2
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[2]                  # scientist D ... G = C
+			end # if
+		end # for
+	else
+		println("error")
+	end # if
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained   
+	end # for
+end # function sevenScientists4vs3Parms
+
+# ╔═╡ e3a74e54-0a19-47f6-8e85-0fcf6238f722
+modelSevenScientists4vs3Parms = 
+	# scientists A- G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists4vs3Parms(n) | (;x = data7)
+	end # let
+
+# ╔═╡ 24276e1a-bdf7-4600-915f-2b63893dd34e
+chainSevenScientists4vs3Parms = 
+	let iterations = 10000
+		# sampler = Prior()
+		# sampler = MH()
+		# sampler = NUTS(2000, 0.65)
+		sampler = PG(10)
+		sample(modelSevenScientists4vs3Parms, sampler, iterations)
+	end # let
+
+# ╔═╡ 8a5ef401-f314-4b0c-a02f-bf416a27569e
+describe(chainSevenScientists4vs3Parms)
+
+# ╔═╡ ff0b53af-76d3-4de8-ade4-1a853d2d934d
+# plot(chainSevenScientists4vs3Parms) # deactivated because of missing values
+
+# ╔═╡ 5e399aea-6b01-480d-9f15-53304f888d2f
+histogram(chainSevenScientists4vs3Parms[:model])
+
+# ╔═╡ 50150ab8-f59b-4038-a973-d7ef75824f18
+md"
+Posterior variables $:p$ and $:model$ provide slight evidence in favor of the 4-Parameter Model.
+"
+
+# ╔═╡ 15428003-4025-4c5d-b6d3-7c72d7369413
+md"
+###### 4- vs. 3.Parameter Model with Dirichlet Priors
+
+This model should give identical results compared to those from the $Beta(1, 1)$-model.
+
+"
+
+# ╔═╡ ec10857e-9151-40e1-a8e3-8f678569f293
+@model function sevenScientists4vs3ParmsDirichletPrior(n)
+	# Hyperparameter
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	p ~ Dirichlet(2, 1)                      # preference for model m1 or m2
+	μ ~ Normal(μ0, σ0)                       # informative common prior
+	σCommon ~ Gamma(α, θ)                    # informative common prior
+	model ~ Categorical(p)
+	if model == 1
+		# evidence for 4-parameter model
+		for i in 1:n 
+			if i <= 3
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[3]                  # scientist D ... G = C
+			end # if
+		end # for
+	elseif model == 2
+		# evidence for 3-parameter model
+		for i in 1:n 
+			if i <= 2
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[2]                  # scientist D ... G = C
+			end # if
+		end # for
+	else
+		println("error")
+	end # if
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained   
+	end # for
+end # function sevenScientists4vs3ParmsDirichletPrior
+
+# ╔═╡ 29179e14-613e-4e5c-b913-b63cec35d727
+modelSevenScientists4vs3ParmsDirichletPrior = 
+	# scientists A- G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists4vs3ParmsDirichletPrior(n) | (;x = data7)
+	end # let
+
+# ╔═╡ 98ffbae7-5698-4d5e-9ac3-2cab1022fb15
+chainSevenScientists4vs3ParmsDirichletPrior = 
+	let iterations = 10000
+		# sampler = Prior()
+		# sampler = MH()
+		# sampler = NUTS(2000, 0.65)
+		sampler = PG(10)
+		sample(modelSevenScientists4vs3ParmsDirichletPrior, sampler, iterations)
+	end # let
+
+# ╔═╡ 07c74269-35bf-4da0-8a29-699c60a3423b
+describe(chainSevenScientists4vs3ParmsDirichletPrior)
+
+# ╔═╡ 82b2a8c0-2d9d-491e-bd39-fc92d7670714
+plot(chainSevenScientists4vs3ParmsDirichletPrior)
+
+# ╔═╡ de1b3677-a41c-4b14-8515-5396a94ba85a
+histogram(chainSevenScientists4vs3ParmsDirichletPrior[:model])
+
+# ╔═╡ 7deed4e3-af4a-4253-b078-ce070464bd48
+md"
+Posterior variables $:p$ and $:model$ provide slight evidence in favor of the 4-Parameter Model. This result is as expected, because the $Beta(1,1)$ is a special case of $Dirichlet(2, 1)$.
+"
+
+# ╔═╡ 2eba6501-93e7-4847-8d64-598f96d5a7c8
+md"
+---
+##### Bayesian Model Comparison with Sets of Models
+###### 8- vs. 4- vs. 3.Parameter Model with Dirichlet Priors
+"
+
+# ╔═╡ 19da6ff9-1e25-4a05-94b2-47b36ea4bbf1
+@model function sevenScientists8vs4vs3ParmsDirichletPrior(n)
+	# Hyperparameter
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	p ~ Dirichlet(3, 1)                      # preference for model m1 or m2
+	μ ~ Normal(μ0, σ0)                       # informative common prior
+	σCommon ~ Gamma(α, θ)                    # informative common prior
+	model ~ Categorical(p)
+	if model == 1
+		# evidence for 8-parameter model
+		for i in 1:n  
+			σ[i] ~ Gamma(α, θ)               # no σ is constrained to be equal
+		end # for
+	elseif model == 2
+		# evidence for 4-parameter model
+		for i in 1:n 
+			if i <= 3
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[3]                  # scientist D ... G = C
+			end # if
+		end # for
+	elseif model == 3
+		# evidence for 3-parameter model
+		for i in 1:n 
+			if i <= 2
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[2]                  # scientist D ... G = C
+			end # if
+		end # for
+	else
+		println("error")
+	end # if
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained   
+	end # for
+end # function sevenScientists8vs4vs3ParmsDirichletPrior
+
+# ╔═╡ 01c6e914-94d1-4cde-894d-92ebb8dd6a98
+modelSevenScientists8vs4vs3ParmsDirichletPrior = 
+	# scientists A- G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists8vs4vs3ParmsDirichletPrior(n) | (;x = data7)
+	end # let
+
+# ╔═╡ e4136dc7-4476-4ea8-a2d4-a933b80df67e
+chainSevenScientists8vs4vs3ParmsDirichletPrior = 
+	let iterations = 10000
+		# sampler = Prior()
+		# sampler = MH()
+		# sampler = NUTS(2000, 0.65)
+		sampler = PG(10)
+		sample(modelSevenScientists8vs4vs3ParmsDirichletPrior, sampler, iterations)
+	end # let
+
+# ╔═╡ 3ab9c846-1332-4b82-a94b-f3293c61d71c
+describe(chainSevenScientists8vs4vs3ParmsDirichletPrior)
+
+# ╔═╡ ccdd7123-f7df-49d4-a421-6c17b3280150
+histogram(chainSevenScientists8vs4vs3ParmsDirichletPrior[:model])
+
+# ╔═╡ bcee4e65-6132-4011-926b-329f14e34c26
+md"
+Posterior variables $:p$ and $:model$ provide clear evidence in favor of the 3-Parameter Model.
+"
+
+# ╔═╡ b4e292dc-8198-41a8-a4df-e869bf7b0f31
+md"
+---
+###### 8- vs. 4- vs. 3- vs. 2- Parameter Model with Dirichlet Priors
+"
+
+# ╔═╡ 64c76fa5-400a-4baf-bc89-368d2511d549
+@model function sevenScientists8vs4vs3vs2ParmsDirichletPrior(n)
+	# Hyperparameter
+	μ0 = 10; σ0 = 10
+	α = 5; θ = 2                             # μ = 10, σ^2 = 20, σ = 4.5
+	nModels = 4
+	#------------------------------------------------------------------------------
+	x = Array{Float64}(undef, n)
+	σ = Array{Float64}(undef, n)
+	#------------------------------------------------------------------------------
+	# Priors
+	p ~ Dirichlet(nModels, 1)                # preference for model m1, m2, m3, or m4
+	μ ~ Normal(μ0, σ0)                       # informative common prior
+	σCommon ~ Gamma(α, θ)                    # informative common prior
+	model ~ Categorical(p)
+	if model == 1
+		# evidence for 8-parameter model
+		for i in 1:n  
+			σ[i] ~ Gamma(α, θ)               # no σ is constrained to be equal
+		end # for
+	elseif model == 2
+		# evidence for 4-parameter model
+		for i in 1:n 
+			if i <= 3
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[3]                  # scientist D ... G = C
+			end # if
+		end # for
+	elseif model == 3
+		# evidence for 3-parameter model
+		for i in 1:n 
+			if i <= 2
+				σ[i] ~ Gamma(α, θ)           # scientist A, B, C
+			else
+				σ[i] = σ[2]                  # scientist D ... G = C
+			end # if
+		end # for
+	elseif model == 4
+		# evidence for 2-parameter model
+		for i in 1:n  
+			σ[i] = σCommon                   # all σs are constrained to be equal
+		end # for
+	else
+		println("error")
+	end # if
+	#------------------------------------------------------------------------------
+	# Gaussian Likelihood
+	for i in 1:n 
+		x[i] ~ Normal(μ, σ[i])               # σ[1], ..., σ[3] are unconstrained   
+	end # for
+end # function sevenScientists8vs4vs3vs2ParmsDirichletPrior
+
+# ╔═╡ 61a74d79-bdf0-4f10-b87d-0afe1bffeba5
+modelSevenScientists8vs4vs3vs2ParmsDirichletPrior = 
+	# scientists A- G
+	let data7 = [-27.020, 3.570, 8.191, 9.898, 9.603, 9.945, 10.056]
+		n     = length(data7)  # number of data or measurements
+		sevenScientists8vs4vs3vs2ParmsDirichletPrior(n) | (;x = data7)
+	end # let
+
+# ╔═╡ 2cfd89be-71c9-4fef-b0f6-9c449f00fe7d
+chainSevenScientists8vs4vs3vs2ParmsDirichletPrior = 
+	let iterations = 10000
+		# sampler = Prior()
+		# sampler = MH()
+		# sampler = NUTS(2000, 0.65)
+		sampler = PG(10)
+		sample(modelSevenScientists8vs4vs3vs2ParmsDirichletPrior, sampler, iterations)
+	end # let
+
+# ╔═╡ 9eadaf38-5803-4b41-93ec-aa3f27c9f8d6
+describe(chainSevenScientists8vs4vs3vs2ParmsDirichletPrior)
+
+# ╔═╡ 689f78b0-ca75-48df-9c42-b3956081b2c1
+histogram(chainSevenScientists8vs4vs3vs2ParmsDirichletPrior[:model])
+
+# ╔═╡ 4cd79f94-1444-4ae3-89fd-85a0d880591d
+md"
+Posterior variables $:p$ and $:model$ provide similar evidence in favor of the 4-and 3-Parameter Model. From this rum we should consider the 4-parameter model with $\mu, \sigma[1], \sigma[2] \text{ and } \sigma[3]$ as the *final* model. Any way scientist *A* is an outsider with separate $\sigma[1]$ and the other scientists *C to G* can be considered having a common measurement error $\sigma[2] \text{ or }\sigma[3]$.
 "
 
 # ╔═╡ bd737dea-25b7-4c30-bb30-5d7c2ed442e8
@@ -1444,15 +2105,24 @@ plot(chainIQ)
 md"
 ---
 ##### References
+
 - **Bishop, C.M.**; *Pattern Recognition and Machine Learning*; Heidelberg: Springer, 2009
 
 - **Brown, J.D.**; *Linear Models in Matrix Form*, Springer, 2014
 
-- **Kockelkorn, U.**; *Statistik für Anwender*, Heidelberg: Springer Spektrum, 2012
+- **Held, L. & Bové, D.S.**, *Applied Statistical Inference: Likelihood and Bayes*, Heidelberg: Springer, 2014
+
+- **Jeffreys, H.**, *Theory of Probability*; Oxford, UK: Oxford University Press, 1961 (3/e)
 
 - **Lee, M.D. & Wagenmakers, E.J.**; *[Bayesian Cognitive Modeling](https://bayesmodels.com/)*, Cambridge, UK: Cambridge University Press, 2013
 
+- **Lunn, D., Jackson, C., Best, N., Thomas, A. & Spiegelhalter, D.**; *The BUGS Book*, Boca Raton, Fl., 2013
+
 - **MacKay, D.J.C.**; *[Information Theory, Inference, and Learning Algorithms](https://www.inference.org.uk/itprnn/book.pdf)*, Cambridge, UK: Cambridge University Press, 2003
+
+- **Murphy, K.P.**; *Machine Learning: A Probabilistic Perspective*; Cambridge, Mass.: MIT Press, 2012
+
+- **Murphy, K.P.**; *Probabilistic Machine Learning: An Introduction*, Cambridge, Mass.: MIT Press, 2022
 
 - **Tarek, M., Xu, K., Trapp, M., Ge, H. & Gharamani, Z.**; *DynamicPPL: Stan-like Speed for Dynamic Probabilistic Models*, 2020, arXiv preprint arXiv:2002.02702, 2020, arxiv.org; last visit 2023/11/27
 
@@ -3824,13 +4494,18 @@ version = "1.4.1+1"
 # ╟─229fb8d2-b056-435d-a086-d431082f6bd4
 # ╟─b669bcb2-c033-4e93-b6c2-659029062abe
 # ╟─b2485cf7-e62e-47a9-8ed3-5a1d2e9771f6
+# ╟─22f6fd48-6ee7-4cba-b9b6-439809b7a090
 # ╟─46c9a9b2-3988-4e76-9bf9-f39b421a57bd
 # ╟─92d288ff-c820-4108-a3a3-b388d9e21242
 # ╟─90414b22-81e7-4fb8-bdba-8ad71c47b201
 # ╟─7a3974a3-98c6-4d38-96c3-074cb6625591
+# ╟─0be23ace-6a25-4912-b4c6-8282af692fa1
 # ╟─58dc7c54-cef6-4d26-bfb5-805396a4c29e
 # ╟─7a400bb0-2d03-49c2-856e-22242a8c3f0e
 # ╟─1b1eb8e5-f9bf-4ed6-9b07-6e72e47f7de7
+# ╟─642ab5b6-ef50-404b-be67-ed06010d93b8
+# ╟─282676df-39a7-4b82-ab22-70e7986e1144
+# ╟─a419cc9c-ae35-4dfa-bb73-d6c6e2642b08
 # ╟─9b0cdc90-b9be-4beb-8c24-7f03702c9c33
 # ╠═2e247173-753f-42c7-ba09-7b2f30431cd2
 # ╟─ae160e02-910f-4621-981a-3a57a7a725d0
@@ -3862,18 +4537,19 @@ version = "1.4.1+1"
 # ╠═0b1b2edf-f8ed-46fb-8f79-fbed008d9ac5
 # ╠═b4d3ed83-4a06-417b-8f91-1c9204a934ce
 # ╠═399fd7f0-e1ef-4335-9c7b-06c7c4c7ee7f
+# ╠═31b57e81-e276-421f-ba15-da4ec3ca9666
 # ╟─2847a69b-fe97-4359-9312-2739c43534e3
 # ╟─21cdf444-1eac-4c7c-b890-46232fe24ce2
 # ╟─2d36ee23-2c04-47fb-b616-5ef5756ffc5c
+# ╟─4592e61e-f76e-41f6-954b-ca4e1caa811c
 # ╟─6f2ce6c4-2bc8-4de2-b3b4-c9d968dac47e
 # ╟─1ea15a61-6f0a-4d0f-946a-fa2cc61edb5c
 # ╠═074dc199-e87c-4664-b645-b79530a563bd
 # ╠═dad2a6b3-769d-4b06-8b3c-08110dd7d88e
 # ╠═0a3e1f1e-c80e-451d-a985-979d1c336e45
 # ╠═e3249e2b-2aa3-40c2-9da3-9649759110e4
-# ╟─4592e61e-f76e-41f6-954b-ca4e1caa811c
 # ╟─8ca88a7e-7bfc-4d62-af4b-359830ea69b5
-# ╟─282676df-39a7-4b82-ab22-70e7986e1144
+# ╟─4ab12f05-4215-4843-99f8-027eca52aee6
 # ╠═e805b24b-d6ac-452d-ad8a-02accb100a3b
 # ╠═ebacb483-157d-4c4f-9a06-c6e8465df8fd
 # ╠═663d689c-8300-49fe-8dc2-e8a2cb6af351
@@ -3886,14 +4562,69 @@ version = "1.4.1+1"
 # ╠═e771dc37-c328-4a25-8397-ad4812f511db
 # ╠═17d53559-fbb9-4ba8-9845-d4a0a8cd16d8
 # ╠═fd518c1e-8e56-4d29-87a4-b6590760cf53
+# ╟─df5358a4-b336-4b1d-a85e-cbbc5561ef79
+# ╠═07287701-177a-4ba5-be3e-bdac478e89d6
+# ╠═e6155f60-6262-4b80-9f46-f8c48e122a5f
+# ╠═21604380-4eeb-47c9-805a-e266264fe905
+# ╠═7c17ac4c-fa32-444e-8014-fe6c685d80e5
+# ╟─44be7383-f438-4950-8b6a-76e7679f9fcf
 # ╟─21a38b04-f2d8-4333-8a0f-0b3959705fb6
 # ╠═ce855725-f44f-4d06-920c-a966012281da
 # ╠═da8f87f0-f351-48e5-ba05-d59117fd4a4b
 # ╠═a9342b19-1ab4-4719-a5b7-84c76db0dca3
 # ╠═1dcfe0e4-bf07-491a-80f0-da30b740eadf
 # ╠═87f04fe5-1609-4940-9048-46ba1b0a880c
+# ╟─baafced4-a13d-4fce-8f69-c158b2563768
+# ╠═d261284d-b3ed-461f-b41c-08f2c04eaee9
 # ╟─60956dc6-b103-4ffa-91f2-00f85c9adf2d
-# ╟─677eabba-0516-45ee-9752-362a3319d9a8
+# ╠═5b81b9ed-a039-4e9c-8da2-1442226ddfe2
+# ╟─90422f78-f8e5-4c9d-b99b-4863ffb2e349
+# ╟─d22d3580-ead8-41e7-a37f-9ccfd1af8f3e
+# ╟─644ac369-0f5d-4407-8683-92901f0eb585
+# ╠═f84653af-f31b-473b-a9df-cc22628bf418
+# ╠═0d6dd01c-50d7-4944-aff6-2f7afcc3c518
+# ╠═5cc7aa6e-c388-4e42-83e7-f4d1134d86f8
+# ╠═5b5f99cb-9a7f-4e7a-b330-9b7a48ed8174
+# ╠═5edb1bf5-fbab-4e1e-8d88-4b25d136a7b0
+# ╠═d41ff2e4-0eea-4976-8f43-22cfe96b105b
+# ╟─3bad9320-0fb8-49d7-8c30-7ea39e56398a
+# ╟─159fbfb7-cecf-4521-8dff-c8ea78e7aae8
+# ╠═bd2b2201-9da1-499f-8875-9f9bb1526061
+# ╠═73371764-0177-45a9-a393-733b75ee623b
+# ╠═93fbdaaf-cbec-44f8-8014-b55893cdc034
+# ╠═d69d7a15-457a-4102-98d2-ccf8da77322c
+# ╠═aea75546-7cb2-4ca4-bc3e-fe13d8630077
+# ╟─8142d902-56f8-439c-a54d-768d38da3e64
+# ╟─b1ed0cab-1f74-49d5-ae75-848c50db45ce
+# ╠═d091f49f-ea21-4658-8ed8-f5e37e4191d2
+# ╠═e3a74e54-0a19-47f6-8e85-0fcf6238f722
+# ╠═24276e1a-bdf7-4600-915f-2b63893dd34e
+# ╠═8a5ef401-f314-4b0c-a02f-bf416a27569e
+# ╠═ff0b53af-76d3-4de8-ade4-1a853d2d934d
+# ╠═5e399aea-6b01-480d-9f15-53304f888d2f
+# ╟─50150ab8-f59b-4038-a973-d7ef75824f18
+# ╟─15428003-4025-4c5d-b6d3-7c72d7369413
+# ╠═ec10857e-9151-40e1-a8e3-8f678569f293
+# ╠═29179e14-613e-4e5c-b913-b63cec35d727
+# ╠═98ffbae7-5698-4d5e-9ac3-2cab1022fb15
+# ╠═07c74269-35bf-4da0-8a29-699c60a3423b
+# ╠═82b2a8c0-2d9d-491e-bd39-fc92d7670714
+# ╠═de1b3677-a41c-4b14-8515-5396a94ba85a
+# ╟─7deed4e3-af4a-4253-b078-ce070464bd48
+# ╟─2eba6501-93e7-4847-8d64-598f96d5a7c8
+# ╠═19da6ff9-1e25-4a05-94b2-47b36ea4bbf1
+# ╠═01c6e914-94d1-4cde-894d-92ebb8dd6a98
+# ╠═e4136dc7-4476-4ea8-a2d4-a933b80df67e
+# ╠═3ab9c846-1332-4b82-a94b-f3293c61d71c
+# ╠═ccdd7123-f7df-49d4-a421-6c17b3280150
+# ╟─bcee4e65-6132-4011-926b-329f14e34c26
+# ╟─b4e292dc-8198-41a8-a4df-e869bf7b0f31
+# ╠═64c76fa5-400a-4baf-bc89-368d2511d549
+# ╠═61a74d79-bdf0-4f10-b87d-0afe1bffeba5
+# ╠═2cfd89be-71c9-4fef-b0f6-9c449f00fe7d
+# ╠═9eadaf38-5803-4b41-93ec-aa3f27c9f8d6
+# ╠═689f78b0-ca75-48df-9c42-b3956081b2c1
+# ╟─4cd79f94-1444-4ae3-89fd-85a0d880591d
 # ╟─bd737dea-25b7-4c30-bb30-5d7c2ed442e8
 # ╟─4f2117d0-0c34-4ddf-96bf-b1f9d5a18f9c
 # ╠═a94deeb2-644d-4512-9a68-5cfad7c183c4
@@ -3902,7 +4633,7 @@ version = "1.4.1+1"
 # ╠═e1bca612-1786-4451-bacf-ba0307cbe0e7
 # ╠═75aaeaca-8745-45da-abec-29a39daa613d
 # ╠═40f4e3c2-43bd-4292-a0e1-9da869f9ffbe
-# ╠═8f2bd59c-df17-494b-944b-7e5f5be5d033
+# ╟─8f2bd59c-df17-494b-944b-7e5f5be5d033
 # ╟─c35c8e43-3ceb-4875-b415-7f06d591d22c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
